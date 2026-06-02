@@ -18,6 +18,7 @@ DOMAIN,mainnet.zklighter.elliot.ai
 #Asterdex
 DOMAIN-KEYWORD,aster
 #Binance
+IP-CIDR,47.106.125.50/32
 DOMAIN-SUFFIX,binance.com
 DOMAIN-SUFFIX,binance.us
 DOMAIN-SUFFIX,binance.org
