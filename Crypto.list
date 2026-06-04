@@ -1,9 +1,9 @@
 #futu
-DOMAIN-SUFFIX,futunn.com,PROXY
-DOMAIN-SUFFIX,moomoo.com,PROXY
-DOMAIN-SUFFIX,futuholdings.com,PROXY
-DOMAIN-SUFFIX,futuhk.com,PROXY
-DOMAIN-SUFFIX,futufin.com,PROXY
+DOMAIN-SUFFIX,futunn.com
+DOMAIN-SUFFIX,moomoo.com
+DOMAIN-SUFFIX,futuholdings.com
+DOMAIN-SUFFIX,futuhk.com
+DOMAIN-SUFFIX,futufin.com
 #rmbbiji
 DOMAIN-SUFFIX,funding.rmbbiji.com
 DOMAIN-SUFFIX,spot.rmbbiji.com
