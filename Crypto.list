@@ -58,7 +58,7 @@ DOMAIN,mainnet.zklighter.elliot.ai
 #Asterdex
 DOMAIN-KEYWORD,aster
 #Binance
-IP-ASN,37963
+#IP-ASN,37963
 DOMAIN-SUFFIX,binance.com
 DOMAIN-SUFFIX,binance.us
 DOMAIN-SUFFIX,binance.org
