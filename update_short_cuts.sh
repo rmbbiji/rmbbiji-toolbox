@@ -6,8 +6,9 @@ echo "=== short_cuts 更新脚本 ==="
 # ==================== 检测 GitHub SSH 权限 (适配 rmbbiji) ====================
 echo "正在检测 rmbbiji (GitHub) SSH 权限..."
 
-# GitHub 专用检测方式
-if ssh -o BatchMode=yes -o ConnectTimeout=12 -o StrictHostKeyChecking=no -T rmbbiji 2>&1 | grep -qi "successfully authenticated"; then
+# GitHub 认证成功也会返回非 0，不能直接用 ssh 退出码判断。
+ssh_output=$(ssh -o BatchMode=yes -o ConnectTimeout=12 -o StrictHostKeyChecking=no -T rmbbiji 2>&1 || true)
+if printf "%s\n" "$ssh_output" | grep -qi "successfully authenticated"; then
     echo "✅ SSH 认证成功（GitHub），开始更新仓库..."
     
     rm -rf short_cuts
