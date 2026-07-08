@@ -192,10 +192,20 @@ if command -v eza >/dev/null 2>&1; then
 fi
 
 if command -v batcat >/dev/null 2>&1; then
+  export BAT_THEME="auto:system"
+  export BAT_THEME_LIGHT="GitHub"
+  export BAT_THEME_DARK="OneHalfDark"
+  export BAT_PAGER="less -RF"
   alias bat='batcat'
-  alias cat='batcat --paging=never --style=plain'
+  alias cat='batcat --paging=never --theme-light=GitHub --theme-dark=OneHalfDark --style=plain'
+  alias v='batcat --paging=never --theme-light=GitHub --theme-dark=OneHalfDark --style=numbers,changes,header'
 elif command -v bat >/dev/null 2>&1; then
-  alias cat='bat --paging=never --style=plain'
+  export BAT_THEME="auto:system"
+  export BAT_THEME_LIGHT="GitHub"
+  export BAT_THEME_DARK="OneHalfDark"
+  export BAT_PAGER="less -RF"
+  alias cat='bat --paging=never --theme-light=GitHub --theme-dark=OneHalfDark --style=plain'
+  alias v='bat --paging=never --theme-light=GitHub --theme-dark=OneHalfDark --style=numbers,changes,header'
 fi
 
 if command -v fdfind >/dev/null 2>&1; then
