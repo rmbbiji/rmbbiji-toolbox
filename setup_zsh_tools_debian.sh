@@ -195,13 +195,13 @@ if command -v batcat >/dev/null 2>&1; then
   export BAT_THEME="GitHub"
   export BAT_PAGER="less -RF"
   alias bat='batcat'
-  alias cat='batcat --paging=never --style=plain'
+  alias cat='batcat'
   alias v='batcat --paging=never --style=numbers,changes,header'
 elif command -v bat >/dev/null 2>&1; then
   export BAT_THEME="GitHub"
   export BAT_PAGER="less -RF"
   alias bat='bat'
-  alias cat='bat --paging=never --style=plain'
+  alias cat='bat'
   alias v='bat --paging=never --style=numbers,changes,header'
 fi
 

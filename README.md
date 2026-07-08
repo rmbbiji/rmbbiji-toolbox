@@ -8,7 +8,7 @@
 | --- | --- |
 | `.vimrc` | 精简版 Vim 终端编辑配置，只保留 15 条常用配置：UTF-8 编码、文件类型缩进、语法高亮、行号、鼠标、退格、缩进和搜索增强。 |
 | `Crypto.list` | 加密货币和交易相关站点的代理/分流规则列表，包含 futu、Binance、Bybit、Gate、HTX、Hyperliquid、KuCoin、MEXC、OKX、MetaMask、WalletConnect、Web3 等域名关键字、域名后缀、IP-CIDR 和 IP-ASN 规则。适合放进支持 `DOMAIN-SUFFIX`、`DOMAIN-KEYWORD`、`IP-CIDR`、`IP-ASN` 规则格式的代理工具中使用。 |
-| `setup_zsh_tools_debian.sh` | Debian / Ubuntu 环境下一次安装 zsh、oh-my-zsh、`eza`、`bat`、`fd-find`、`zoxide` 和 Nerd Font，并安装/更新 `zsh-autosuggestions`、`zsh-syntax-highlighting`。脚本会备份已有 `.zshrc`，写入 `ls` / `ll` / `la` / `tree` / `cat` / `v` / `fd` / `zoxide` 相关配置，并为 `bat` 设置兼容较旧 Debian 版本的默认主题，然后尝试切换当前用户默认 shell 为 zsh。 |
+| `setup_zsh_tools_debian.sh` | Debian / Ubuntu 环境下一次安装 zsh、oh-my-zsh、`eza`、`bat`、`fd-find`、`zoxide` 和 Nerd Font，并安装/更新 `zsh-autosuggestions`、`zsh-syntax-highlighting`。脚本会备份已有 `.zshrc`，写入 `ls` / `ll` / `la` / `tree` / `cat` / `v` / `fd` / `zoxide` 相关配置，其中 `cat` 会直接映射到 `bat`，并为 `bat` 设置兼容较旧 Debian 版本的默认主题，然后尝试切换当前用户默认 shell 为 zsh。 |
 | `install_rmbbiji_github_rsa_key.sh` | 在远程服务器上拉取 `https://github.com/rmbbiji.keys`，只提取其中的 `ssh-rsa` 公钥，并写入当前用户的 `~/.ssh/authorized_keys`。重复执行不会重复追加。适合先给服务器配置 `rmbbiji` 的登录公钥。 |
 | `update_short_cuts.sh` | 更新 `short_cuts` 仓库。脚本会先删除当前目录下已有的 `short_cuts` 目录，然后通过 SSH 克隆 `git@rmbbiji:rain-strom/short_cuts.git`，最后给 `short_cuts/expand/get_running_python.sh` 添加执行权限。运行前需要确认当前目录正确，并且本机已配置好对应 SSH 权限和 `rmbbiji` Git 主机别名。 |
 | `update_report.sh` | 完整替换 `$HOME/py/report`。脚本可以从任意目录执行，会克隆 `git@rmbbiji:rmbbiji/trading-tools.git` 到临时目录，删除旧的 `$HOME/py/report`，再把新版 `report` 移动到 `$HOME/py/report`，不会做目录合并，也不会备份旧目录。 |
