@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Debian / Ubuntu: 安装 zsh + oh-my-zsh + eza/bat/fd/zoxide + Nerd Font
+# Debian / Ubuntu: 安装 zsh + oh-my-zsh + Starship + eza/bat/fd/zoxide + Nerd Font
 # 用法：
 #   bash setup_zsh_tools_debian.sh
 # 可选：
@@ -22,13 +22,14 @@ ZSH_CUSTOM="${ZSH_CUSTOM:-${ZSH_DIR}/custom}"
 ZSHRC="${TARGET_HOME}/.zshrc"
 NERD_FONT_NAME="${NERD_FONT_NAME:-JetBrainsMono}"
 NERD_FONT_DIR="${TARGET_HOME}/.local/share/fonts/NerdFonts/${NERD_FONT_NAME}"
+STARSHIP_CONFIG="${TARGET_HOME}/.config/starship.toml"
 MANAGED_BEGIN="# >>> rmbbiji-toolbox managed block >>>"
 MANAGED_END="# <<< rmbbiji-toolbox managed block <<<"
 
 echo "当前用户: ${TARGET_USER}"
 echo "用户目录: ${TARGET_HOME}"
 echo "Nerd Font: ${NERD_FONT_NAME}"
-echo "开始安装 zsh / oh-my-zsh / eza / bat / fd / zoxide / Nerd Font..."
+echo "开始安装 zsh / oh-my-zsh / Starship / eza / bat / fd / zoxide / Nerd Font..."
 
 ${SUDO} apt-get update
 ${SUDO} apt-get install -y \
@@ -111,6 +112,35 @@ install_zoxide() {
 }
 
 install_zoxide
+
+install_starship() {
+  local starship_bin backup_file
+  starship_bin="${TARGET_HOME}/.local/bin/starship"
+
+  if command -v starship >/dev/null 2>&1; then
+    starship_bin="$(command -v starship)"
+    echo "Starship 已存在，跳过安装"
+  elif [[ -x "${starship_bin}" ]]; then
+    echo "Starship 已存在，跳过安装"
+  else
+    echo "安装 Starship..."
+    mkdir -p "${TARGET_HOME}/.local/bin"
+    curl -sS https://starship.rs/install.sh | sh -s -- -y -b "${TARGET_HOME}/.local/bin"
+  fi
+
+  mkdir -p "$(dirname "${STARSHIP_CONFIG}")"
+  if [[ -f "${STARSHIP_CONFIG}" ]]; then
+    backup_file="${STARSHIP_CONFIG}.bak.$(date +%Y%m%d_%H%M%S)"
+    echo "备份 ${STARSHIP_CONFIG} 到 ${backup_file}"
+    cp "${STARSHIP_CONFIG}" "${backup_file}"
+  fi
+
+  echo "写入 Starship Catppuccin Powerline 配置: ${STARSHIP_CONFIG}"
+  "${starship_bin}" preset catppuccin-powerline -o "${STARSHIP_CONFIG}"
+  sed -i '/^\[line_break\]$/,/^$/ s/^disabled = true$/disabled = false/' "${STARSHIP_CONFIG}"
+}
+
+install_starship
 
 install_nerd_font() {
   local tmp_dir archive_url archive_path
@@ -212,6 +242,10 @@ fi
 if command -v zoxide >/dev/null 2>&1; then
   eval "$(zoxide init zsh)"
 fi
+
+if command -v starship >/dev/null 2>&1; then
+  eval "$(starship init zsh)"
+fi
 # <<< rmbbiji-toolbox managed block <<<
 EOF
 
@@ -255,7 +289,7 @@ fi
 echo
 echo "安装完成。"
 echo "请到你的终端设置里把字体切换成 '${NERD_FONT_NAME} Nerd Font' 或同名字体变体。"
-echo "这样 eza / bat / 其他带图标的工具才会正常显示图标。"
+echo "这样 Starship / eza / bat / 其他带图标的工具才会正常显示图标。"
 
 if [[ -t 0 && -t 1 ]]; then
   echo
