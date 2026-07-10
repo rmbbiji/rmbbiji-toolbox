@@ -20,7 +20,7 @@
 
 ### 安装 zsh / 常用终端工具
 
-这个脚本面向 Debian / Ubuntu，会安装 zsh、oh-my-zsh、Starship、`eza`、`bat`、`fd-find`、`zoxide` 和 Nerd Font。Starship 使用 Catppuccin Powerline 彩虹条，输入符号单独显示在下一行。执行完成后会自动进入新的 zsh 登录会话。
+这个脚本面向 Debian / Ubuntu，会安装 zsh、oh-my-zsh、Starship、`eza`、`bat`、`fd-find`、`zoxide` 和 Nerd Font。Starship 使用 Catppuccin Powerline 彩虹条，输入符号单独显示在下一行。执行完成后，请运行 `exec zsh -l`，或退出并重新连接 SSH，以加载新的终端配置。
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/rmbbiji/rmbbiji-toolbox/main/setup_zsh_tools_debian.sh)"

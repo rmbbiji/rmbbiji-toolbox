@@ -136,7 +136,7 @@ install_starship() {
   fi
 
   echo "写入 Starship Catppuccin Powerline 配置: ${STARSHIP_CONFIG}"
-  "${starship_bin}" preset catppuccin-powerline -o "${STARSHIP_CONFIG}"
+  "${starship_bin}" preset catppuccin-powerline -o "${STARSHIP_CONFIG}" --force
   sed -i '/^\[line_break\]$/,/^$/ s/^disabled = true$/disabled = false/' "${STARSHIP_CONFIG}"
 }
 
@@ -293,6 +293,5 @@ echo "这样 Starship / eza / bat / 其他带图标的工具才会正常显示�
 
 if [[ -t 0 && -t 1 ]]; then
   echo
-  echo "正在自动进入新的 zsh 登录会话..."
-  exec zsh -l
+  echo "请执行 'exec zsh -l'，或退出并重新连接 SSH，以加载新的终端配置。"
 fi
