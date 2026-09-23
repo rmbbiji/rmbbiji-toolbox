@@ -3,6 +3,27 @@ set -euo pipefail
 
 echo "=== short_cuts 更新脚本 ==="
 
+# ==================== 第一步：清理 ~/logs 中超过 3 天的日志 ====================
+logs_dir="$HOME/logs"
+log_keep_days=3
+
+echo "正在清理 $logs_dir 中超过 ${log_keep_days} 天的文件..."
+if [ -d "$logs_dir" ]; then
+    # -type f        ：只删文件，保留目录结构（~/logs 本身不会被删）
+    # -mtime +3      ：最后修改时间超过 3 天；如需精确 72 小时可改为 -mmin +4320
+    # 清理过程中出现的权限/IO 错误只提示、不中断整个更新流程。
+    old_logs=$( { find "$logs_dir" -type f -mtime +"$log_keep_days" 2>/dev/null || true; } | wc -l | tr -d ' ' )
+    if [ "$old_logs" -gt 0 ]; then
+        find "$logs_dir" -type f -mtime +"$log_keep_days" -delete 2>/dev/null || true
+        left_logs=$( { find "$logs_dir" -type f 2>/dev/null || true; } | wc -l | tr -d ' ' )
+        echo "✅ 已清理 $old_logs 个超过 ${log_keep_days} 天的日志文件，剩余 $left_logs 个。"
+    else
+        echo "ℹ️  没有超过 ${log_keep_days} 天的日志文件，无需清理。"
+    fi
+else
+    echo "ℹ️  目录 $logs_dir 不存在，跳过清理。"
+fi
+
 auth_file="/root/short_cuts/web/data/auth.json"
 auth_backup="/root/auth.json"
 
