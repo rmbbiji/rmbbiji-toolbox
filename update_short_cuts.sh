@@ -32,7 +32,18 @@ if printf "%s\n" "$ssh_output" | grep -qi "successfully authenticated"; then
     fi
 
     echo "✅ 仓库更新完成。"
-    
+
+    # 认证文件会随着 rm -rf short_cuts 一起消失，这里尽早恢复：
+    # 后续任何步骤失败（比如依赖安装报错退出）时，Web 控制台的 auth.json 都还在。
+    if [ -f "$auth_backup" ]; then
+        echo "正在恢复 web 认证文件..."
+        mkdir -p "$(dirname "$auth_file")"
+        cp -f "$auth_backup" "$auth_file"
+        echo "✅ 已将 $auth_backup 复制到 $auth_file，源文件继续保留。"
+    else
+        echo "ℹ️  未找到 $auth_backup，无需复制认证文件。"
+    fi
+
 else
     echo "⚠️  无法通过 SSH 访问 rmbbiji，跳过更新，使用本地已有版本。"
 fi
@@ -50,7 +61,20 @@ fi
 
 echo "正在安装依赖..."
 if [ -f "short_cuts/requirements.txt" ]; then
-    pip3 install --break-system-packages -r short_cuts/requirements.txt
+    # 这里必须带 --ignore-installed：
+    # lighter-sdk>=1.1.4 要求 urllib3<2.1.0，pip 会去装 urllib3 2.0.7；
+    # 但 Debian 上的 urllib3 2.3.0 由 apt（python3-urllib3）装在 /usr/lib/python3/dist-packages，
+    # 没有 RECORD 文件，pip 卸载它会直接报 uninstall-no-record-file 并中断整个脚本。
+    # 加上 --ignore-installed 后 pip 只往 /usr/local 的 dist-packages 里装（sys.path 中优先于
+    # /usr/lib/python3/dist-packages），不再尝试卸载 apt 的包。
+    if ! pip3 install --break-system-packages --ignore-installed -r short_cuts/requirements.txt; then
+        echo "❌ 依赖安装失败。"
+        echo "   如仍报 uninstall-no-record-file，请在服务器上手动执行同一条命令查看完整日志："
+        echo "   pip3 install --break-system-packages --ignore-installed -r short_cuts/requirements.txt"
+        exit 1
+    fi
+    # lighter-sdk 要求 urllib3<2.1，这里打印实际生效的版本，便于确认没有被 apt 的 2.3.0 抢走。
+    python3 -c "import urllib3; print('   urllib3', urllib3.__version__, urllib3.__file__)" || true
     echo "✅ 依赖安装完成。"
 else
     echo "⚠️  未找到 short_cuts/requirements.txt，跳过安装。"
@@ -73,16 +97,7 @@ get_server_pids() {
     '
 }
 
-# 先恢复认证文件，再关闭旧服务，确保新服务启动时认证文件已经就位。
-if [ -f "$auth_backup" ]; then
-    echo "正在恢复 web 认证文件..."
-    mkdir -p "$(dirname "$auth_file")"
-    cp -f "$auth_backup" "$auth_file"
-    echo "✅ 已将 $auth_backup 复制到 $auth_file，源文件继续保留。"
-else
-    echo "ℹ️  未找到 $auth_backup，无需复制认证文件。"
-fi
-
+# 认证文件已在 clone 之后立即恢复（见上方），这里直接关闭旧服务。
 echo "正在停止旧的 short_cuts Web 服务..."
 server_pids=$(get_server_pids)
 if [ -n "$server_pids" ]; then
