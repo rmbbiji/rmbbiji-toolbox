@@ -38,7 +38,7 @@ if printf "%s\n" "$ssh_output" | grep -qi "successfully authenticated"; then
     if [ -f "$auth_file" ]; then
         if [ ! -f "$auth_backup" ]; then
             cp "$auth_file" "$auth_backup"
-            echo "✅ 已将 web 认证文件备份到 $auth_backup。"
+            echo "✅ 已将 web 认证文件备份到 ${auth_backup}。"
         else
             echo "ℹ️  $auth_backup 已存在，继续保留该认证文件。"
         fi
@@ -60,9 +60,9 @@ if printf "%s\n" "$ssh_output" | grep -qi "successfully authenticated"; then
         echo "正在恢复 web 认证文件..."
         mkdir -p "$(dirname "$auth_file")"
         cp -f "$auth_backup" "$auth_file"
-        echo "✅ 已将 $auth_backup 复制到 $auth_file，源文件继续保留。"
+        echo "✅ 已将 $auth_backup 复制到 ${auth_file}，源文件继续保留。"
     else
-        echo "ℹ️  未找到 $auth_backup，无需复制认证文件。"
+        echo "ℹ️  未找到 ${auth_backup}，无需复制认证文件。"
     fi
 
 else
@@ -154,6 +154,6 @@ if ! kill -0 "$server_pid" 2>/dev/null; then
     echo "❌ Web 服务启动失败。"
     exit 1
 fi
-echo "✅ Web 服务已启动（PID: $server_pid，端口: $server_port）。"
+echo "✅ Web 服务已启动（PID: ${server_pid}，端口: ${server_port}）。"
 
 echo "🎉 所有步骤执行完毕！"
