@@ -10,6 +10,7 @@
 | `Crypto.list` | 加密货币和交易相关站点的代理/分流规则列表，包含 futu、Binance、Bybit、Gate、HTX、Hyperliquid、KuCoin、MEXC、OKX、MetaMask、WalletConnect、Web3 等域名关键字、域名后缀、IP-CIDR 和 IP-ASN 规则。适合放进支持 `DOMAIN-SUFFIX`、`DOMAIN-KEYWORD`、`IP-CIDR`、`IP-ASN` 规则格式的代理工具中使用。 |
 | `setup_zsh_tools_debian.sh` | Debian / Ubuntu 环境下一次安装 zsh、oh-my-zsh、Starship、`eza`、`bat`、`fd-find`、`fzf`、`zoxide` 和 Nerd Font，并安装/更新 `zsh-autosuggestions`、`zsh-syntax-highlighting`。脚本会备份已有 `.zshrc` 和 Starship 配置，写入 Catppuccin Powerline 双行提示符，以及 `ls` / `ll` / `la` / `tree` / `cat` / `v` / `fd` / `zoxide` 相关配置，其中 `cat` 会直接映射到 `bat`，并为 `bat` 设置兼容较旧 Debian 版本的默认主题，然后尝试切换当前用户默认 shell 为 zsh。`fzf` 使用官方 git 安装脚本，自动启用 zsh 的补全和快捷键。 |
 | `install_rmbbiji_github_rsa_key.sh` | 在远程服务器上拉取 `https://github.com/rmbbiji.keys`，只提取其中的 `ssh-rsa` 公钥，并写入当前用户的 `~/.ssh/authorized_keys`。重复执行不会重复追加。适合先给服务器配置 `rmbbiji` 的登录公钥。 |
+| `setup_gitee_key.sh` | 在远程服务器上配好 Gitee 的 SSH 密钥：按需生成 ed25519 密钥（已存在则跳过，不会覆盖），把 `~/.ssh/config` 整理成正确的 `Host gitee.com` / `Host ssh.gitee.com` 两段（会先备份、并与 `Host rmbbiji` 之类的自定义别名区分开），然后打印公钥并跑一次真实的 `git ls-remote` 验证。可重复执行，结果幂等。用于解决「密钥配了、公钥也传了，但更新脚本仍报无法访问 Gitee」这类问题。 |
 | `update_short_cuts.sh` | 更新 `short_cuts` 仓库。脚本会先删除当前目录下已有的 `short_cuts` 目录，然后通过 SSH 克隆 `git@rmbbiji:rain-strom/short_cuts.git`，给 `short_cuts/expand/get_running_python.sh` 添加执行权限并安装依赖，最后停止并重启 `/root/short_cuts/web/server.py`（端口 `4188`）。运行前需要确认当前目录正确，并且本机已配置好对应 SSH 权限和 `rmbbiji` Git 主机别名。 |
 | `update_short_cuts_gitee.sh` | 从 Gitee 的 `rmbbiji/short_cuts` 更新仓库，适合 GitHub 的 `rmbbiji` 别名不可用、但已在本机配置好 Gitee SSH 权限的场景。与 `update_short_cuts.sh` 的区别在于：① **探测方式**——用 `git ls-remote` 直接探测 Gitee 仓库本身（与 `git clone` 走同一条认证链路），不再用 `ssh -T` 测另一个平台；② **私钥显式指定**——自动探测 `~/.ssh/rmbbiji_gitee`、`~/.ssh/gitee_ed25519`、`~/.ssh/gitee`，也可用 `GITEE_SSH_KEY` 指定，用 `-i` 传给 ssh，从而绕开 `~/.ssh/config` 的 Host 别名问题；③ **多通道回退**——`gitee.com:22` 不通时自动改用 `ssh.gitee.com:443`，还可用 `GITEE_TOKEN` 环境变量走 HTTPS 私人令牌；④ **安全更新**——先克隆到临时目录、成功后再原子替换，`clone` 失败时保留本地版本并继续执行后续步骤，不会出现「旧目录已删、新目录又没下来」导致服务起不来的情况。其余步骤（清理 `~/logs`、备份并尽早恢复 Web 认证文件、装依赖、重启服务）与 GitHub 版一致。 |
 | `update_report.sh` | 完整替换 `$HOME/py/report`。脚本可以从任意目录执行，会克隆 `git@rmbbiji:rmbbiji/trading-tools.git` 到临时目录，删除旧的 `$HOME/py/report`，再把新版 `report` 移动到 `$HOME/py/report`，不会做目录合并，也不会备份旧目录。 |
@@ -43,9 +44,32 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/rmbbiji/rmbbiji-toolbox/
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/rmbbiji/rmbbiji-toolbox/main/update_short_cuts.sh)"
 ```
 
+### 逐步配置 Gitee 的 SSH 密钥
+
+如果这台服务器要用下面的 Gitee 版脚本，先跑这一个把密钥和 `~/.ssh/config` 配好：
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/rmbbiji/rmbbiji-toolbox/main/setup_gitee_key.sh)"
+```
+
+它会：生成 `~/.ssh/rmbbiji_gitee`（**已存在则跳过，不会覆盖你现有的密钥**）→ 备份并整理 `~/.ssh/config`（写入 `Host gitee.com` 与 `Host ssh.gitee.com` 两段，指向这把密钥）→ 打印公钥 → 用 `git ls-remote` 实测仓库能不能拉。
+
+把打印出来的公钥贴到 Gitee 后，再跑一次同样的命令，看到 `✅ 通过，可以运行更新脚本了` 就算就绪。
+
+可修改的参数（用环境变量传）：
+
+| 变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `GITEE_SSH_KEY` | `~/.ssh/rmbbiji_gitee` | 私钥路径 |
+| `GITEE_REPO` | `git@gitee.com:rmbbiji/short_cuts.git` | 用于验证的仓库 |
+
+脚本可重复执行，结果幂等；改动前会在 `~/.ssh/config.bak.<时间戳>` 留一份备份，回滚就是 `cp -a` 回去（脚本末尾会打印具体路径）。
+
+**它做了什么、为什么要这么做：** 见下面「配置 Gitee SSH 时最容易踩的两个坑」。
+
 ### 更新 short_cuts（从 Gitee 克隆）
 
-和上面的脚本行为基本一致，区别是源码仓库换成 Gitee 的 `rmbbiji/short_cuts`（私有库），并且：
+和上面的脚本行为基本一致，区别是源码仓库换成 Gitee 的 `rmbbiji/short_cuts`（私有库）。**第一次使用请先跑上面的 `setup_gitee_key.sh` 配好密钥**，另外还有这些区别：
 
 - **探测改用 `git ls-remote`**：直接探测 Gitee 仓库本身，和后面的 `git clone` 走完全相同的认证链路，探测通过基本就等于克隆能成。
 - **私钥显式指定**：脚本会自动查找 `~/.ssh/rmbbiji_gitee` → `~/.ssh/gitee_ed25519` → `~/.ssh/gitee`，找到就用 `-i` 显式传给 ssh；也可用 `GITEE_SSH_KEY=/path/to/key` 覆盖。这一步是为了绕开下面这个坑。
@@ -67,6 +91,8 @@ Host gitee.com
 ```
 
 写成 `Host rmbbiji` 之类**自定义别名是无效的** —— 别名不会被匹配到，ssh 会退回使用 `~/.ssh/id_rsa`、`~/.ssh/id_ed25519` 等默认密钥，最后报 `Permission denied (publickey)`。更麻烦的是 `ssh -T rmbbiji` 这种自测方式会成功，很容易误判成「密钥没问题」。
+
+`setup_gitee_key.sh` 就是按真实主机名写配置的，跑完还会自动检查「连接 `gitee.com` 时**首个生效的私钥**是否正是目标密钥」，能直接把这个坑暴露出来。
 
 所以自测请用脚本同款命令，而不是 `ssh -T`：
 
