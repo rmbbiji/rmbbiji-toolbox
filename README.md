@@ -11,7 +11,7 @@
 | `setup_zsh_tools_debian.sh` | Debian / Ubuntu 环境下一次安装 zsh、oh-my-zsh、Starship、`eza`、`bat`、`fd-find`、`fzf`、`zoxide` 和 Nerd Font，并安装/更新 `zsh-autosuggestions`、`zsh-syntax-highlighting`。脚本会备份已有 `.zshrc` 和 Starship 配置，写入 Catppuccin Powerline 双行提示符，以及 `ls` / `ll` / `la` / `tree` / `cat` / `v` / `fd` / `zoxide` 相关配置，其中 `cat` 会直接映射到 `bat`，并为 `bat` 设置兼容较旧 Debian 版本的默认主题，然后尝试切换当前用户默认 shell 为 zsh。`fzf` 使用官方 git 安装脚本，自动启用 zsh 的补全和快捷键。 |
 | `install_rmbbiji_github_rsa_key.sh` | 在远程服务器上拉取 `https://github.com/rmbbiji.keys`，只提取其中的 `ssh-rsa` 公钥，并写入当前用户的 `~/.ssh/authorized_keys`。重复执行不会重复追加。适合先给服务器配置 `rmbbiji` 的登录公钥。 |
 | `update_short_cuts.sh` | 更新 `short_cuts` 仓库。脚本会先删除当前目录下已有的 `short_cuts` 目录，然后通过 SSH 克隆 `git@rmbbiji:rain-strom/short_cuts.git`，给 `short_cuts/expand/get_running_python.sh` 添加执行权限并安装依赖，最后停止并重启 `/root/short_cuts/web/server.py`（端口 `4188`）。运行前需要确认当前目录正确，并且本机已配置好对应 SSH 权限和 `rmbbiji` Git 主机别名。 |
-| `update_short_cuts_gitee.sh` | 与 `update_short_cuts.sh` 逻辑完全一致，仅把克隆地址换成 Gitee 的 `git@gitee.com:rmbbiji/short_cuts.git`，其余步骤（清理日志、备份并恢复 Web 认证文件、装依赖、重启服务）逐行相同。适合 GitHub 的 `rmbbiji` 别名不可用、但已在本机配置好 Gitee SSH 权限的场景。 |
+| `update_short_cuts_gitee.sh` | 从 Gitee 的 `rmbbiji/short_cuts` 更新仓库，适合 GitHub 的 `rmbbiji` 别名不可用、但已在本机配置好 Gitee SSH 权限的场景。与 `update_short_cuts.sh` 的区别在于：① **探测方式**——用 `git ls-remote` 直接探测 Gitee 仓库本身（与 `git clone` 走同一条认证链路），不再用 `ssh -T` 测另一个平台；② **多通道回退**——`gitee.com:22` 不通时自动改用 `ssh.gitee.com:443`，还可用 `GITEE_TOKEN` 环境变量走 HTTPS 私人令牌；③ **安全更新**——先克隆到临时目录、成功后再原子替换，`clone` 失败时保留本地版本并继续执行后续步骤，不会出现「旧目录已删、新目录又没下来」导致服务起不来的情况。其余步骤（清理 `~/logs`、备份并尽早恢复 Web 认证文件、装依赖、重启服务）与 GitHub 版一致。 |
 | `update_report.sh` | 完整替换 `$HOME/py/report`。脚本可以从任意目录执行，会克隆 `git@rmbbiji:rmbbiji/trading-tools.git` 到临时目录，删除旧的 `$HOME/py/report`，再把新版 `report` 移动到 `$HOME/py/report`，不会做目录合并，也不会备份旧目录。 |
 | `clear_codex_chat_history_no_backup.sh` | 清理本机 Codex 聊天历史。默认目标目录是 `$HOME/.codex`，也可以通过 `CODEX_HOME` 指定。脚本会清空相关 SQLite 表、`session_index.jsonl`、`sessions` 文件和 `shell_snapshots` 文件；运行前会要求交互确认。该操作不可逆，建议先退出 Codex 再执行。 |
 
@@ -45,7 +45,13 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/rmbbiji/rmbbiji-toolbox/
 
 ### 更新 short_cuts（从 Gitee 克隆）
 
-和上面的脚本行为完全相同，只把源码仓库换成 Gitee 的 `git@gitee.com:rmbbiji/short_cuts.git`。其余步骤（清理 `~/logs`、备份并尽早恢复 Web 认证文件、安装依赖、重启 Web 服务）保持一致。使用前请确认本机已配置好能访问 Gitee 的 SSH 密钥，否则脚本在克隆环节会失败。
+和上面的脚本行为基本一致，区别是源码仓库换成 Gitee 的 `rmbbiji/short_cuts`（私有库），并且：
+
+- **探测改用 `git ls-remote`**：直接探测 Gitee 仓库本身，和后面的 `git clone` 走完全相同的认证链路，探测通过基本就等于克隆能成。
+- **三通道自动回退**：`git@gitee.com:22` → `ssh://git@ssh.gitee.com:443/...` → HTTPS（设置 `GITEE_TOKEN` 私人令牌后启用）。机房封 22 端口时无需额外处理。
+- **原子替换**：先把仓库克隆到临时目录，成功后再替换 `./short_cuts`。克隆失败会保留本地已有版本，并继续执行后面的装依赖、重启服务步骤。
+
+使用前请确认本机已配置好能访问 Gitee 的 SSH 密钥（`ssh -T git@gitee.com` 应返回 `You've successfully authenticated`），否则脚本会走「跳过更新」分支并打印配置步骤。
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/rmbbiji/rmbbiji-toolbox/main/update_short_cuts_gitee.sh)"

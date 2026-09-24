@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "=== short_cuts 更新脚本 ==="
+echo "=== short_cuts 更新脚本（Gitee 版） ==="
 
 # ==================== 第一步：清理 ~/logs 中超过 3 天的日志 ====================
 logs_dir="$HOME/logs"
@@ -27,13 +27,59 @@ fi
 auth_file="/root/short_cuts/web/data/auth.json"
 auth_backup="/root/auth.json"
 
-# ==================== 检测 GitHub SSH 权限 (适配 rmbbiji) ====================
-echo "正在检测 rmbbiji (GitHub) SSH 权限..."
+work_dir="$(pwd)"
+clone_dir="$work_dir/short_cuts"
+tmp_dir="$work_dir/.short_cuts_new.$$"
+# 中途任何原因退出都清掉临时目录，不污染工作目录
+trap 'rm -rf "$tmp_dir"' EXIT
 
-# GitHub 认证成功也会返回非 0，不能直接用 ssh 退出码判断。
-ssh_output=$(ssh -o BatchMode=yes -o ConnectTimeout=12 -o StrictHostKeyChecking=no -T rmbbiji 2>&1 || true)
-if printf "%s\n" "$ssh_output" | grep -qi "successfully authenticated"; then
-    echo "✅ SSH 认证成功（GitHub），开始更新仓库..."
+# ==================== Gitee 仓库地址与探测方式 ====================
+# ① 默认通道：gitee.com 的 22 端口
+gitee_repo_ssh="git@gitee.com:rmbbiji/short_cuts.git"
+# ② 备用通道：Gitee 官方为「22 端口被封锁」提供的 443 端口
+gitee_repo_ssh443="ssh://git@ssh.gitee.com:443/rmbbiji/short_cuts.git"
+# ③ 兜底通道：完全绕开 SSH，用 Gitee 私人令牌走 HTTPS
+#    启用方式：先 export GITEE_TOKEN=<你的私人令牌>，再执行本脚本
+gitee_repo_https="https://oauth2:${GITEE_TOKEN:-}@gitee.com/rmbbiji/short_cuts.git"
+
+# 所有 SSH 操作统一参数：非交互 + 超时 + 自动接受新主机指纹（否则会卡在 yes/no 提示）
+GIT_SSH_OPTS="ssh -o BatchMode=yes -o ConnectTimeout=12 -o StrictHostKeyChecking=accept-new"
+
+git_ssh() {
+    GIT_SSH_COMMAND="$GIT_SSH_OPTS" git "$@"
+}
+
+# 用 git ls-remote 探测仓库，而不是 ssh -T：
+# 它和后面的 git clone 走的是**同一条认证链路**，「探测通过」就基本等于「clone 能成」。
+# 这一点正是原脚本的病根——原来测的是 GitHub（ssh -T rmbbiji），clone 的却是 Gitee，
+# 两者用的是不同平台的密钥，所以永远对不上，只能一直走「跳过更新」分支。
+probe_repo() {
+    case "$1" in
+        http*) git ls-remote --heads "$1" >/dev/null 2>&1 ;;
+        *)     git_ssh ls-remote --heads "$1" >/dev/null 2>&1 ;;
+    esac
+}
+
+echo "正在检测 Gitee 仓库可访问性：$gitee_repo_ssh"
+gitee_ok=""
+gitee_repo=""
+if probe_repo "$gitee_repo_ssh"; then
+    gitee_ok=1
+    gitee_repo="$gitee_repo_ssh"
+    echo "✅ Gitee SSH 认证成功（22 端口）。"
+elif probe_repo "$gitee_repo_ssh443"; then
+    gitee_ok=1
+    gitee_repo="$gitee_repo_ssh443"
+    echo "✅ Gitee SSH 认证成功（22 端口不通，已自动改用 443 端口）。"
+elif [ -n "${GITEE_TOKEN:-}" ] && probe_repo "$gitee_repo_https"; then
+    gitee_ok=1
+    gitee_repo="$gitee_repo_https"
+    echo "✅ 已通过 Gitee 私人令牌（HTTPS）认证成功。"
+fi
+
+# ==================== 更新仓库 ====================
+if [ -n "$gitee_ok" ]; then
+    echo "开始更新仓库..."
 
     if [ -f "$auth_file" ]; then
         if [ ! -f "$auth_backup" ]; then
@@ -44,17 +90,31 @@ if printf "%s\n" "$ssh_output" | grep -qi "successfully authenticated"; then
         fi
     fi
 
-    rm -rf short_cuts
-    git clone git@gitee.com:rmbbiji/short_cuts.git
-    
-    if [ ! -d "short_cuts" ]; then
-        echo "❌ git clone 失败！"
-        exit 1
+    # 先克隆到临时目录，成功后再整体替换。
+    # 原脚本是 rm -rf short_cuts && git clone，一旦 clone 失败，
+    # 本地版本已经没了、脚本又 set -e 退出，服务直接起不来（与「保留本地版本」的承诺自相矛盾）。
+    rm -rf "$tmp_dir"
+    if git_ssh clone "$gitee_repo" "$tmp_dir"; then
+        old_dir="${clone_dir}.old.$$"
+        rm -rf "$old_dir"
+        if [ -d "$clone_dir" ]; then
+            mv "$clone_dir" "$old_dir"
+        fi
+        mv "$tmp_dir" "$clone_dir"
+        rm -rf "$old_dir"
+
+        if [ ! -d "$clone_dir" ]; then
+            echo "❌ 仓库替换失败！"
+            exit 1
+        fi
+        echo "✅ 仓库更新完成（来源：$gitee_repo）。"
+    else
+        rm -rf "$tmp_dir"
+        echo "❌ git clone 失败（探测通过但拉取失败，多为网络抖动）。"
+        echo "   本地版本 $clone_dir 未被改动，本次跳过更新并继续走后续流程。"
     fi
 
-    echo "✅ 仓库更新完成。"
-
-    # 认证文件会随着 rm -rf short_cuts 一起消失，这里尽早恢复：
+    # 认证文件会随目录替换一起消失，这里尽早恢复：
     # 后续任何步骤失败（比如依赖安装报错退出）时，Web 控制台的 auth.json 都还在。
     if [ -f "$auth_backup" ]; then
         echo "正在恢复 web 认证文件..."
@@ -66,7 +126,19 @@ if printf "%s\n" "$ssh_output" | grep -qi "successfully authenticated"; then
     fi
 
 else
-    echo "⚠️  无法通过 SSH 访问 rmbbiji，跳过更新，使用本地已有版本。"
+    echo "⚠️  无法通过 SSH 访问 Gitee 仓库 rmbbiji/short_cuts，跳过更新，使用本地已有版本。"
+    echo "   排查步骤："
+    echo "   1) 在本机生成一把专供 Gitee 的密钥（不要和 GitHub 混用同一把）："
+    echo "        ssh-keygen -t ed25519 -C \"rmbbiji@gitee\" -f ~/.ssh/gitee_ed25519 -N \"\""
+    echo "   2) 把公钥 ~/.ssh/gitee_ed25519.pub 的内容，贴到 Gitee → 设置 → SSH 公钥 里。"
+    echo "   3) 在 ~/.ssh/config 增加（显式指定用哪把 key，避免和 GitHub 的串台）："
+    echo "        Host gitee.com"
+    echo "          HostName gitee.com"
+    echo "          User git"
+    echo "          IdentityFile ~/.ssh/gitee_ed25519"
+    echo "          IdentitiesOnly yes"
+    echo "   4) 自测：ssh -T git@gitee.com     → 应返回 Hi rmbbiji! You've successfully authenticated..."
+    echo "      若 22 端口超时：ssh -T -p 443 git@ssh.gitee.com （本脚本已内置 443 自动回退）"
 fi
 
 # ==================== 后续操作 ====================
