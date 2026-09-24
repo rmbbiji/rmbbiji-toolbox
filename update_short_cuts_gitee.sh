@@ -52,7 +52,14 @@ ssh_base_opts="ssh -o BatchMode=yes -o ConnectTimeout=12 -o StrictHostKeyCheckin
 # ~/.ssh 下的默认密钥（id_rsa / id_ed25519 …），最终报 Permission denied (publickey)。
 # 而 `ssh -T rmbbiji` 自测却是成功的，非常容易误判。
 # 可选覆盖：export GITEE_SSH_KEY=/path/to/your_gitee_key
-gitee_key="${GITEE_SSH_KEY:-}"
+gitee_key=""
+if [ -n "${GITEE_SSH_KEY:-}" ]; then
+    if [ -f "$GITEE_SSH_KEY" ]; then
+        gitee_key="$GITEE_SSH_KEY"
+    else
+        echo "⚠️  GITEE_SSH_KEY 指向的文件不存在：${GITEE_SSH_KEY}（已忽略，改为自动探测）"
+    fi
+fi
 if [ -z "$gitee_key" ]; then
     for k in "$HOME/.ssh/rmbbiji_gitee" "$HOME/.ssh/gitee_ed25519" "$HOME/.ssh/gitee"; do
         if [ -f "$k" ]; then
