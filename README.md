@@ -50,11 +50,13 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/rmbbiji/rmbbiji-toolbox/
 
 原来的命令带 `--ignore-installed`，会忽略"已安装且满足要求"的检查，每次更新都把 50+ 个依赖原样重装一遍（1~2 分钟）——而绝大多数更新只改了业务代码，依赖根本没动。现在真正需要安装时会先走普通 `pip3 install`（只装差异），只有在失败时才回退到 `--ignore-installed`，保留 Debian 上 apt 版 `urllib3` 没有 `RECORD` 文件、pip 卸载报 `uninstall-no-record-file` 的兼容处理。
 
-需要强制重装（例如怀疑依赖被装坏）时加参数：
+需要强制重装（例如怀疑依赖被装坏）时加环境变量，`curl | bash` 和本地脚本两种跑法都适用：
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/rmbbiji/rmbbiji-toolbox/main/update_short_cuts.sh)" --force-deps
+FORCE_DEPS=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/rmbbiji/rmbbiji-toolbox/main/update_short_cuts.sh)"
 ```
+
+本地脚本也可以直接加参数：`bash update_short_cuts.sh --force-deps`。
 
 ### 逐步配置 Gitee 的 SSH 密钥
 

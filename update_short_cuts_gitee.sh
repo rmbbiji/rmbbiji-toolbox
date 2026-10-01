@@ -224,10 +224,16 @@ fi
 # --ignore-installed 会让 pip 忽略“已安装且满足要求”的检查，每次更新都把 50+ 个依赖
 # 原样重装一遍（1~2 分钟）。但绝大多数更新只改业务代码，requirements.txt 没动，
 # 完全没必要装。这里用 requirements.txt 的 sha256 做门控：内容没变就直接跳过。
-# 需要强制重装时加参数：bash update_short_cuts_gitee.sh --force-deps
+# 需要强制重装时（怀疑依赖被装坏），下面三种写法都支持：
+#   bash update_short_cuts_gitee.sh --force-deps
+#   FORCE_DEPS=1 bash -c "$(curl -fsSL .../update_short_cuts_gitee.sh)"
+#   bash -c "$(curl -fsSL .../update_short_cuts_gitee.sh)" _ --force-deps
+# 注意第二种最稳：bash -c 后面的第一个参数会落进 $0 而不是 $1，所以这里三个位置都认。
 deps_hash_file="$HOME/.short_cuts_requirements.sha256"
 force_deps=0
-if [ "${1:-}" = "--force-deps" ]; then force_deps=1; fi
+if [ "${1:-}" = "--force-deps" ] || [ "${0:-}" = "--force-deps" ] || [ "${FORCE_DEPS:-}" = "1" ]; then
+    force_deps=1
+fi
 
 echo "正在检查依赖..."
 if [ -f "short_cuts/requirements.txt" ]; then
@@ -236,7 +242,7 @@ if [ -f "short_cuts/requirements.txt" ]; then
 
     if [ "$force_deps" -eq 0 ] && [ -n "$prev_hash" ] && [ "$req_hash" = "$prev_hash" ]; then
         echo "ℹ️  requirements.txt 未变化，跳过依赖安装（秒过）。"
-        echo "   如需强制重装：bash update_short_cuts_gitee.sh --force-deps"
+        echo "   如需强制重装：FORCE_DEPS=1 重跑本脚本，或加参数 --force-deps"
     else
         reason="首次安装"
         if [ -n "$prev_hash" ]; then reason="requirements.txt 已变化"; fi
