@@ -80,23 +80,59 @@ else
     exit 1
 fi
 
-echo "正在安装依赖..."
+# ==================== 安装依赖（仅当 requirements.txt 变化时才装） ====================
+# 旧写法是 `pip3 install --break-system-packages --ignore-installed -r ...`。
+# --ignore-installed 会让 pip 忽略“已安装且满足要求”的检查，每次更新都把 50+ 个依赖
+# 原样重装一遍（1~2 分钟）。但绝大多数更新只改业务代码，requirements.txt 没动，
+# 完全没必要装。这里用 requirements.txt 的 sha256 做门控：内容没变就直接跳过。
+# 需要强制重装时加参数：bash update_short_cuts.sh --force-deps
+deps_hash_file="$HOME/.short_cuts_requirements.sha256"
+force_deps=0
+if [ "${1:-}" = "--force-deps" ]; then force_deps=1; fi
+
+echo "正在检查依赖..."
 if [ -f "short_cuts/requirements.txt" ]; then
-    # 这里必须带 --ignore-installed：
-    # lighter-sdk>=1.1.4 要求 urllib3<2.1.0，pip 会去装 urllib3 2.0.7；
-    # 但 Debian 上的 urllib3 2.3.0 由 apt（python3-urllib3）装在 /usr/lib/python3/dist-packages，
-    # 没有 RECORD 文件，pip 卸载它会直接报 uninstall-no-record-file 并中断整个脚本。
-    # 加上 --ignore-installed 后 pip 只往 /usr/local 的 dist-packages 里装（sys.path 中优先于
-    # /usr/lib/python3/dist-packages），不再尝试卸载 apt 的包。
-    if ! pip3 install --break-system-packages --ignore-installed -r short_cuts/requirements.txt; then
-        echo "❌ 依赖安装失败。"
-        echo "   如仍报 uninstall-no-record-file，请在服务器上手动执行同一条命令查看完整日志："
-        echo "   pip3 install --break-system-packages --ignore-installed -r short_cuts/requirements.txt"
-        exit 1
+    req_hash=$(sha256sum short_cuts/requirements.txt | awk '{print $1}')
+    prev_hash=$(cat "$deps_hash_file" 2>/dev/null || true)
+
+    if [ "$force_deps" -eq 0 ] && [ -n "$prev_hash" ] && [ "$req_hash" = "$prev_hash" ]; then
+        echo "ℹ️  requirements.txt 未变化，跳过依赖安装（秒过）。"
+        echo "   如需强制重装：bash update_short_cuts.sh --force-deps"
+    else
+        reason="首次安装"
+        if [ -n "$prev_hash" ]; then reason="requirements.txt 已变化"; fi
+        if [ "$force_deps" -eq 1 ]; then reason="指定了 --force-deps"; fi
+        echo "正在安装依赖（${reason}）..."
+
+        installed=0
+        # 先走普通安装：pip 会跳过已满足的包，只装新增/变更的依赖，通常几秒完成。
+        if pip3 install --break-system-packages -r short_cuts/requirements.txt; then
+            installed=1
+        else
+            # 兜底：Debian 上 urllib3 2.3.0 由 apt（python3-urllib3）装在
+            # /usr/lib/python3/dist-packages，没有 RECORD 文件；lighter-sdk>=1.1.4 要求
+            # urllib3<2.1.0，pip 降级时会尝试卸载 apt 的包并报 uninstall-no-record-file。
+            # --ignore-installed 让 pip 只往 /usr/local 的 dist-packages 里装（sys.path 中优先于
+            # /usr/lib/python3/dist-packages），不再尝试卸载 apt 的包；代价是全量重装，故仅在必要时用。
+            echo "ℹ️  普通安装未成功，改用 --ignore-installed 重试..."
+            if pip3 install --break-system-packages --ignore-installed -r short_cuts/requirements.txt; then
+                installed=1
+            fi
+        fi
+
+        if [ "$installed" -ne 1 ]; then
+            echo "❌ 依赖安装失败。"
+            echo "   如报 uninstall-no-record-file，请在服务器上手动执行同一条命令查看完整日志："
+            echo "   pip3 install --break-system-packages --ignore-installed -r short_cuts/requirements.txt"
+            exit 1
+        fi
+
+        # 仅安装成功才写 hash，避免失败后下次被误判成“依赖已是最新”。
+        printf '%s\n' "$req_hash" > "$deps_hash_file"
+        # lighter-sdk 要求 urllib3<2.1，这里打印实际生效的版本，便于确认没有被 apt 的 2.3.0 抢走。
+        python3 -c "import urllib3; print('   urllib3', urllib3.__version__, urllib3.__file__)" || true
+        echo "✅ 依赖安装完成。"
     fi
-    # lighter-sdk 要求 urllib3<2.1，这里打印实际生效的版本，便于确认没有被 apt 的 2.3.0 抢走。
-    python3 -c "import urllib3; print('   urllib3', urllib3.__version__, urllib3.__file__)" || true
-    echo "✅ 依赖安装完成。"
 else
     echo "⚠️  未找到 short_cuts/requirements.txt，跳过安装。"
 fi
