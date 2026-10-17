@@ -10,7 +10,7 @@
 | --- | --- |
 | `settings.json` | Windows Terminal 配置。含 7 条自定义键位、4 个 profile、字体与外观 |
 | `profile.ps1` | PowerShell 7 profile。含编码设置、PSReadLine、oh-my-posh、Terminal-Icons、PSFzf、zoxide、别名与小工具 |
-| `apply.ps1` | 部署脚本。校验 → 备份 → 复制 → 复校，支持 `-WhatIf` |
+| `apply.ps1` | 部署脚本。校验 → 备份 → 复制 → 复校，支持 `-WhatIf`，也支持远程一键执行 |
 
 ## 适用环境
 
@@ -43,6 +43,26 @@ scoop install psfzf terminal-icons --bucket extras
 `Meslo-NF` 是 Nerd Font，必须安装，否则 oh-my-posh 与 Terminal-Icons 的图标会显示成方块。字体家族名以 `MesloLGM Nerd Font` 被 `settings.json` 的 `font.face` 引用。
 
 ## 部署
+
+### 方式零：一键远程执行（无需克隆）
+
+```powershell
+irm https://raw.githubusercontent.com/rmbbiji/rmbbiji-toolbox/main/windows-terminal-config/apply.ps1 | iex
+```
+
+只预演、不写任何文件：
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/rmbbiji/rmbbiji-toolbox/main/windows-terminal-config/apply.ps1))) -WhatIf
+```
+
+远程执行时 `$PSScriptRoot` 为空，脚本会自动把 `settings.json` 与 `profile.ps1` 下载到系统临时目录，部署结束后删除，不残留。写入前同样会备份。
+
+可用 `-Ref` 指定分支或标签，用 `-ProfileOnly` / `-TerminalOnly` 单项部署，例如：
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/rmbbiji/rmbbiji-toolbox/main/windows-terminal-config/apply.ps1))) -TerminalOnly
+```
 
 ### 方式一：脚本
 
