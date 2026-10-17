@@ -55,15 +55,12 @@
         "list": 
         [
             {
-                "colorScheme": "One Half Dark",
                 "commandline": "%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -NoLogo",
                 "guid": "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}",
                 "hidden": false,
                 "icon": "none",
                 "name": "\u7ec8\u7aef",
-                "opacity": 80,
-                "startingDirectory": "C:\\Users\\zuo",
-                "useAcrylic": true
+                "startingDirectory": "C:\\Users\\zuo"
             },
             {
                 "commandline": "%SystemRoot%\\System32\\cmd.exe",
@@ -78,19 +75,14 @@
                 "source": "Windows.Terminal.Azure"
             },
             {
-                "backgroundImage": "D:\\zuo\\Pictures\\Camera Roll\\wallhaven-4vz9jl.png",
-                "colorScheme": "One Half Dark",
                 "commandline": "\"C:\\Program Files\\PowerShell\\7\\pwsh.exe\" -NoLogo",
                 "guid": "{574e775e-4f2a-5b96-ac1e-a2962a402336}",
                 "hidden": false,
                 "name": "PowerShell",
-                "opacity": 100,
-                "source": "Windows.Terminal.PowershellCore",
-                "useAcrylic": false
+                "source": "Windows.Terminal.PowershellCore"
             }
         ]
     },
     "schemes": [],
-    "theme": "light",
     "themes": []
 }
