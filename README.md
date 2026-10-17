@@ -15,6 +15,7 @@
 | `update_short_cuts_gitee.sh` | 从 Gitee 的 `rmbbiji/short_cuts` 更新仓库，适合 GitHub 的 `rmbbiji` 别名不可用、但已在本机配置好 Gitee SSH 权限的场景。与 `update_short_cuts.sh` 的区别在于：① **探测方式**——用 `git ls-remote` 直接探测 Gitee 仓库本身（与 `git clone` 走同一条认证链路），不再用 `ssh -T` 测另一个平台；② **私钥显式指定**——自动探测 `~/.ssh/rmbbiji_gitee`、`~/.ssh/gitee_ed25519`、`~/.ssh/gitee`，也可用 `GITEE_SSH_KEY` 指定，用 `-i` 传给 ssh，从而绕开 `~/.ssh/config` 的 Host 别名问题；③ **多通道回退**——`gitee.com:22` 不通时自动改用 `ssh.gitee.com:443`，还可用 `GITEE_TOKEN` 环境变量走 HTTPS 私人令牌；④ **安全更新**——先克隆到临时目录、成功后再原子替换，`clone` 失败时保留本地版本并继续执行后续步骤，不会出现「旧目录已删、新目录又没下来」导致服务起不来的情况。其余步骤（清理 `~/logs`、备份并尽早恢复 Web 认证文件、装依赖、重启服务）与 GitHub 版一致。 |
 | `update_report.sh` | 完整替换 `$HOME/py/report`。脚本可以从任意目录执行，会克隆 `git@rmbbiji:rmbbiji/trading-tools.git` 到临时目录，删除旧的 `$HOME/py/report`，再把新版 `report` 移动到 `$HOME/py/report`，不会做目录合并，也不会备份旧目录。 |
 | `clear_codex_chat_history_no_backup.sh` | 清理本机 Codex 聊天历史。默认目标目录是 `$HOME/.codex`，也可以通过 `CODEX_HOME` 指定。脚本会清空相关 SQLite 表、`session_index.jsonl`、`sessions` 文件和 `shell_snapshots` 文件；运行前会要求交互确认。该操作不可逆，建议先退出 Codex 再执行。 |
+| [`windows-terminal-config/`](windows-terminal-config/README.md) | Windows Terminal 与 PowerShell 7 的成套配置（Windows 端）。含 `settings.json`、`profile.ps1` 与带校验和备份的 `apply.ps1` 部署脚本。终端键位改为 `Ctrl+T` 新建标签页、`Ctrl+N` 新建窗口、`Ctrl+W` 关闭窗格；shell 侧为 PSReadLine 原生补全 + PSFzf 的 fzf 补全（`Ctrl+Alt+J`）、fzf 选文件（`Ctrl+Alt+T`）、zoxide 目录跳转与 oh-my-posh 提示符。说明文档记录了动作 ID 必须精确匹配、本机 `Alt` 组合键送不到 PSReadLine、zoxide 初始化须置于 oh-my-posh 之后等实测结论。 |
 
 ## 远程运行 Shell 脚本
 
